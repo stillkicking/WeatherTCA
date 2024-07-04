@@ -71,7 +71,7 @@ struct Locations {
             case .doneButtonTapped:
                 let didUpdateItems = state._itemsUpdated
                 if didUpdateItems {
-                    state.locations = persistanceManager.locations // otherwise during close aniation, would render with original order
+                    state.locations = persistanceManager.locations // see comment for .moveLocation action
                 }
                 return .run() { send in await send(.delegate(.close(didUpdateItems))) }
 
@@ -88,13 +88,17 @@ struct Locations {
                 
             case .deleteLocation(let index):
                 if let location = state.locations[safe: index] {
-                    state.locations.remove(at: index)
                     persistanceManager.deleteLocationFor(location.uuid)
+                    state.locations = persistanceManager.locations
                     state._itemsUpdated = true
                 }
                 
             case .moveLocation(let from, let to):
                 persistanceManager.moveLocationFrom(from, to: to)
+                // Attempting to update state.locations here causes the animation to slow down horribly (don't know why). But if we do not
+                // update state.locations with the re-order, then on dismissal of the sheet, the order is displayed incorrectly (as the
+                // original order). But fortunately we can update state.locations on dismissal and the rendering of the animation displays
+                // the correct order.
                 state._itemsUpdated = true
 
             case .alert(let action):
