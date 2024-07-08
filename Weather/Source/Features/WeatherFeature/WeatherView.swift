@@ -44,14 +44,14 @@ struct WeatherView: View {
                                             .padding(.top, 100)
                                     }
                                 } else {
-                                     ForEach( Array(store.scope(state: \.forecasts, action: \.forecasts).enumerated()), id: \.element) { index, childStore in
+                                    ForEach( Array(store.scope(state: \.forecasts, action: \.forecasts).enumerated()), id: \.element) { index, childStore in
                                         SummaryForecastView(store: childStore)
-                                         
-                                         if store.state.showVideo && index == 0 { // video is the second item or the first if the only item
+                                        
+                                        if store.state.showVideo && index == 0 { // video is the second item or the first if the only item
                                             VideoForecastView()
-                                         }
-                                     }
-                                     .displayAsCard()
+                                        }
+                                    }
+                                    .displayAsCard()
                                 }
                             }
                             .padding(.bottom, 16)
@@ -59,6 +59,10 @@ struct WeatherView: View {
                         .padding(0)
                         .padding(.top, 8)
                         .refreshable { store.send(.reloadForecastsRequested) }
+                    
+                    case .error(let apiError):
+                        Text(String(describing: apiError)) // TBD - make more user-friendly
+                            .foregroundColor(.defaultText)
                     }
                 }
                 .navigationBarTitleDisplayMode(.inline)

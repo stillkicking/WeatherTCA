@@ -77,6 +77,7 @@ struct Locations {
 
             case .toggleShowCurrentLocation(let isOn):
                 state.showCurrentLocation = isOn
+                state.locations = persistanceManager.locations
                 state._itemsUpdated = true
                 if isOn {
                     clLocationManager.requestWhenInUseAuthorization()
@@ -84,6 +85,7 @@ struct Locations {
 
             case .toggleShowVideo(let isOn):
                 state.showVideo = isOn
+                state.locations = persistanceManager.locations
                 state._itemsUpdated = true
                 
             case .deleteLocation(let index):

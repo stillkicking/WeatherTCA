@@ -15,8 +15,8 @@ struct Weather {
  
     @ObservableState
     struct State: Equatable {
-        enum Loading {
-            case idle, loading, loaded
+        enum Loading: Equatable {
+            case idle, loading, loaded, error(String)
         }
         @Shared (.appStorage("showVideo")) var showVideo = false
         @Shared (.appStorage("showCurrentLocation")) var showCurrentLocation = false
@@ -53,7 +53,8 @@ struct Weather {
         
         // INTERNAL actions
         case _loadForecasts
-        case _loadForecastsResponse(Result<[Forecast], any Error>)
+        case _receivedForecasts([Forecast])
+        case _apiError(Error)
     }
     
     var body: some ReducerOf<Self> {
@@ -85,24 +86,27 @@ struct Weather {
            // INTERNAL actions
             case ._loadForecasts:
                 state.loading = .loading
-                return .publisher() {
-                    let locations = persistanceManager.locations.map { Location(from: $0) }
-                    return networkManager.forecastPublisher(for: locations,
-                                                            includeCurrentLocation: state.showCurrentLocation)
-                        .map { Action._loadForecastsResponse( $0 )}
+                let locations = persistanceManager.locations.map { Location(from: $0) }
+                let showCurrentLocation = state.showCurrentLocation
+
+                return .run() { send in
+                    do {
+                        let response = try await networkManager.getForecasts(for: locations, includeCurrentLocation: showCurrentLocation)
+                        await send(._receivedForecasts(response))
+                    }
+                    catch (let error) {
+                        await send(._apiError(error)) // cannot set state here (in concurrently-executing code) - must return an effect instead
+                    }
                 }
 
-            case let ._loadForecastsResponse(response):
-                switch response {
-                case let .success(data):
-                    let forecastStates = data.map { SummaryForecast.State(forecast: $0) }
-                    state.forecasts = .init(uniqueElements: forecastStates)
-                case .failure: // (error):
-                    // TBD display error to user
-                    break
-                }
+            case let ._receivedForecasts(forecasts):
+                let forecastStates = forecasts.map { SummaryForecast.State(forecast: $0) }
+                state.forecasts = .init(uniqueElements: forecastStates)
                 state.loading = .loaded
-                
+            
+            case let ._apiError(error):
+                state.loading = .error(error.localizedDescription)
+
             // DELEGATE actions
             case .forecasts(.element(let id, .delegate(.dayTapped(let day)))):
                 if let forecast: Forecast = state.forecasts[id: id]?.forecast {

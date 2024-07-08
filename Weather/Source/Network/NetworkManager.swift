@@ -7,12 +7,11 @@
 //  NOTE - when the API is mocked, ensure that the simulator's location (set in Features->Location) is set to 'Apple' as that is the mocked current location.
 //
 
-import Combine
 import CoreLocation
 import WeatherNetworkingKit
 
 public protocol NetworkManagerProtocol {
-    func forecastPublisher(for locations: [Location], includeCurrentLocation: Bool) -> AnyPublisher<Result<[Forecast], Error>, Never>
+    func getForecasts(for locations: [Location], includeCurrentLocation: Bool) async throws -> [Forecast]
 }
 
 public class NetworkManager: NetworkManagerProtocol {
@@ -23,8 +22,8 @@ public class NetworkManager: NetworkManagerProtocol {
         self.apiService = apiService
     }
     
-    public func forecastPublisher(for locations: [Location],
-                                  includeCurrentLocation: Bool) -> AnyPublisher<Result<[WeatherNetworkingKit.Forecast], Error>, Never> {
+    public func getForecasts(for locations: [Location],
+                             includeCurrentLocation: Bool) async throws -> [Forecast] {
         var _locations = locations
         
         if includeCurrentLocation,
@@ -32,9 +31,10 @@ public class NetworkManager: NetworkManagerProtocol {
             _locations.insert(currentLocation, at: 0)
         }
 
-        return apiService.getForecasts(locations: _locations)
-            .delay(for: .seconds(0.5), scheduler: RunLoop.main ) // DEV-ONLY, force a delay for dev testing to allow busy indicator to show
-            .eraseToAnyPublisher()
+#if DEBUG
+        try await Task.sleep(until: .now + .seconds(0.5)) // DEV-ONLY, force a delay for dev testing to allow busy indicator to show
+#endif
+        return try await apiService.getForecastsAsyncAwait(for: _locations)
     }
 
     private func getCurrentLocation(withName name: String) -> Location? {

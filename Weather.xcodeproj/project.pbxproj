@@ -1149,9 +1149,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/still-kicking-test/WeatherNetworkingKit";
 			requirement = {
-				kind = versionRange;
-				maximumVersion = 2.0.0;
-				minimumVersion = 1.0.0;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.2;
 			};
 		};
 		AB77AFB12C061FC200969943 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
